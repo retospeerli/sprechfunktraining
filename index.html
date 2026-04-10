@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sprechfunk-Training</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <h1>Sprechfunk-Training</h1>
+        <p class="subtitle">Leertaste gedrückt halten = senden</p>
+      </div>
+      <button id="speakPromptBtn" class="secondary-btn" type="button">Aufgabe nochmals vorlesen</button>
+    </header>
+
+    <main class="layout">
+      <section class="panel left-panel">
+        <h2>Aufgabe wählen</h2>
+
+        <div class="mode-grid" id="modeGrid">
+          <button class="mode-card active" data-mode="receive">
+            <span class="mode-title">Angerufen werden</span>
+            <span class="mode-text">Du hörst einen Funkaufruf und antwortest korrekt.</span>
+          </button>
+
+          <button class="mode-card" data-mode="start">
+            <span class="mode-title">Gespräch beginnen</span>
+            <span class="mode-text">Du beginnst das Funkgespräch korrekt.</span>
+          </button>
+
+          <button class="mode-card" data-mode="end">
+            <span class="mode-title">Gespräch beenden</span>
+            <span class="mode-text">Du beendest ein Funkgespräch korrekt.</span>
+          </button>
+        </div>
+
+        <div class="controls">
+          <button id="newTaskBtn" class="primary-btn" type="button">Neue Aufgabe</button>
+        </div>
+
+        <div class="task-box">
+          <h3>Aktuelle Aufgabe</h3>
+          <p id="taskTitle" class="task-title">–</p>
+          <p id="taskInstruction" class="task-instruction">–</p>
+          <div class="radio-box">
+            <div class="radio-label">Funkspruch des Programms</div>
+            <div id="programLine" class="radio-line">–</div>
+          </div>
+        </div>
+
+        <div class="ptt-box">
+          <h3>Senden</h3>
+          <p class="ptt-hint">
+            Halte die <strong>Leertaste</strong> gedrückt und sprich erst nach der kleinen Funkpause.
+          </p>
+          <button id="pttBtn" class="ptt-btn" type="button">Leertaste halten zum Senden</button>
+          <div id="recordState" class="record-state idle">Bereit</div>
+        </div>
+
+        <div class="legend">
+          <h3>Auswertung</h3>
+          <div class="legend-row"><span class="legend-chip ok"></span> richtig an der richtigen Stelle</div>
+          <div class="legend-row"><span class="legend-chip missing"></span> fehlt</div>
+          <div class="legend-row"><span class="legend-chip extra"></span> falsch / an falscher Stelle</div>
+        </div>
+      </section>
+
+      <section class="panel right-panel">
+        <h2>Auswertung</h2>
+
+        <div class="result-card">
+          <h3>Transkription</h3>
+          <div id="heardText" class="heard-text">Noch keine Aufnahme.</div>
+        </div>
+
+        <div class="result-card">
+          <h3>Markierte Auswertung</h3>
+          <div id="analysisText" class="analysis-text">Nach der ersten Antwort erscheint hier die Kontrolle.</div>
+        </div>
+
+        <div class="result-card">
+          <h3>Rückmeldung</h3>
+          <div id="feedbackText" class="feedback-text">–</div>
+        </div>
+
+        <div class="result-card">
+          <h3>Musterlösung</h3>
+          <div id="solutionText" class="solution-text">–</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
