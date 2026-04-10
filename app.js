@@ -17,6 +17,12 @@
     solutionText: document.getElementById("solutionText"),
   };
 
+  const audio = {
+    button: new Audio("audio/button.wav"),
+    beep: new Audio("audio/beep.wav"),
+    noise: new Audio("audio/radio-noise.wav")
+  };
+
   const state = {
     mode: "receive",
     currentTask: null,
@@ -27,6 +33,10 @@
     partialTranscript: "",
     finalTranscript: "",
     pauseTimer: null,
+    speechTimer: null,
+    audioUnlocked: false,
+    voices: [],
+    pointerPressed: false
   };
 
   const tasks = {
@@ -36,58 +46,113 @@
         instruction: "Das Programm ruft dich. Antworte korrekt als Bruno.",
         programLine: "Bruno von Anna, antworten",
         expected: "Anna von Bruno, verstanden, antworten",
+        pcFollowUp: "Richtig, Schluss"
       },
       {
         title: "Du wirst angerufen",
         instruction: "Das Programm ruft dich. Antworte korrekt als Chiara.",
         programLine: "Chiara von Bruno, antworten",
         expected: "Bruno von Chiara, verstanden, antworten",
+        pcFollowUp: "Richtig, Schluss"
       },
       {
         title: "Du wirst angerufen",
         instruction: "Das Programm ruft dich. Antworte korrekt als Anna.",
         programLine: "Anna von Chiara, antworten",
         expected: "Chiara von Anna, verstanden, antworten",
+        pcFollowUp: "Richtig, Schluss"
       }
     ],
+
     start: [
       {
         title: "Du beginnst das Gespräch",
         instruction: "Du willst Bruno sprechen. Starte das Funkgespräch korrekt.",
         programLine: "Aufgabe: Rufe Bruno korrekt auf.",
         expected: "Bruno von Anna, antworten",
+        pcFollowUp: "Anna von Bruno, verstanden, antworten"
       },
       {
         title: "Du beginnst das Gespräch",
         instruction: "Du willst Chiara sprechen. Starte das Funkgespräch korrekt.",
         programLine: "Aufgabe: Rufe Chiara korrekt auf.",
         expected: "Chiara von Bruno, antworten",
+        pcFollowUp: "Bruno von Chiara, verstanden, antworten"
       },
       {
         title: "Du beginnst das Gespräch",
         instruction: "Du willst Anna sprechen. Starte das Funkgespräch korrekt.",
         programLine: "Aufgabe: Rufe Anna korrekt auf.",
         expected: "Anna von Chiara, antworten",
+        pcFollowUp: "Chiara von Anna, verstanden, antworten"
       }
     ],
+
     end: [
       {
         title: "Du beendest das Gespräch",
         instruction: "Das Gespräch ist richtig bestätigt. Beende es korrekt.",
-        programLine: "Anna von Bruno, verstanden: Treffpunkt beim grossen Stein um drei Uhr, antworten",
+        programLine: "Anna von Bruno, verstanden, Treffpunkt beim grossen Stein um drei Uhr, antworten",
         expected: "Richtig, Schluss",
+        pcFollowUp: "Schluss"
       },
       {
         title: "Du beendest das Gespräch",
         instruction: "Die Meldung wurde korrekt verstanden. Beende das Gespräch korrekt.",
-        programLine: "Bruno von Chiara, verstanden: Treffpunkt beim alten Baum um vier Uhr, antworten",
+        programLine: "Bruno von Chiara, verstanden, Treffpunkt beim alten Baum um vier Uhr, antworten",
         expected: "Richtig, Schluss",
+        pcFollowUp: "Schluss"
       },
       {
         title: "Du beendest das Gespräch",
         instruction: "Das Funkgespräch ist fertig. Beende korrekt.",
-        programLine: "Chiara von Anna, verstanden: Treffpunkt beim Bach um zwei Uhr, antworten",
+        programLine: "Chiara von Anna, verstanden, Treffpunkt beim Bach um zwei Uhr, antworten",
         expected: "Richtig, Schluss",
+        pcFollowUp: "Schluss"
+      }
+    ],
+
+    notunderstood_pc: [
+      {
+        title: "Der PC hat dich absichtlich nicht verstanden",
+        instruction: "Sprich zuerst korrekt. Danach meldet der PC absichtlich: Nicht verstanden. Dann musst du korrekt wiederholen.",
+        programLine: "Du rufst Bruno und sagst den Treffpunkt beim grossen Stein um drei Uhr.",
+        expected: "Bruno von Anna, antworten",
+        pcFollowUp: "Anna von Bruno, verstanden, antworten",
+        secondPrompt: "Treffpunkt beim grossen Stein um drei Uhr, antworten",
+        secondExpected: "Ich wiederhole, Treffpunkt beim grossen Stein um drei Uhr, antworten",
+        forcedPcReply: "Nicht verstanden, wiederholen, antworten"
+      },
+      {
+        title: "Der PC hat dich absichtlich nicht verstanden",
+        instruction: "Sprich zuerst korrekt. Danach wiederholst du die Meldung korrekt.",
+        programLine: "Du rufst Chiara und sagst den Treffpunkt beim alten Baum um vier Uhr.",
+        expected: "Chiara von Bruno, antworten",
+        pcFollowUp: "Bruno von Chiara, verstanden, antworten",
+        secondPrompt: "Treffpunkt beim alten Baum um vier Uhr, antworten",
+        secondExpected: "Ich wiederhole, Treffpunkt beim alten Baum um vier Uhr, antworten",
+        forcedPcReply: "Nicht verstanden, wiederholen, antworten"
+      }
+    ],
+
+    notunderstood_student: [
+      {
+        title: "Du hast den PC absichtlich nicht verstanden",
+        instruction: "Der PC spricht absichtlich undeutlich oder gestört. Du antwortest korrekt mit: Nicht verstanden, wiederholen, antworten.",
+        programLine: "Bruno von Anna, antworten",
+        expected: "Anna von Bruno, verstanden, antworten",
+        pcFollowUp: "Treffpunkt beim grossen Stein um drei Uhr, antworten",
+        secondExpected: "Nicht verstanden, wiederholen, antworten",
+        repeatLine: "Ich wiederhole, Treffpunkt beim grossen Stein um drei Uhr, antworten"
+      },
+      {
+        title: "Du hast den PC absichtlich nicht verstanden",
+        instruction: "Der PC spricht absichtlich gestört. Danach forderst du korrekt eine Wiederholung.",
+        programLine: "Chiara von Bruno, antworten",
+        expected: "Bruno von Chiara, verstanden, antworten",
+        pcFollowUp: "Treffpunkt beim alten Baum um vier Uhr, antworten",
+        secondExpected: "Nicht verstanden, wiederholen, antworten",
+        repeatLine: "Ich wiederhole, Treffpunkt beim alten Baum um vier Uhr, antworten"
       }
     ]
   };
@@ -99,33 +164,159 @@
       return;
     }
 
+    prepareAudio();
+    setupVoices();
     setupRecognition();
     bindEvents();
+    ensureExtraModeCards();
     setMode("receive");
     loadRandomTask();
+  }
+
+  function ensureExtraModeCards() {
+    const existing = [...document.querySelectorAll(".mode-card")].map(btn => btn.dataset.mode);
+
+    const extras = [
+      {
+        mode: "notunderstood_pc",
+        title: "PC versteht dich nicht",
+        text: "Der PC sagt absichtlich: Nicht verstanden. Du übst die korrekte Wiederholung."
+      },
+      {
+        mode: "notunderstood_student",
+        title: "Du verstehst den PC nicht",
+        text: "Der PC spricht absichtlich gestört. Du musst korrekt Wiederholen verlangen."
+      }
+    ];
+
+    extras.forEach(item => {
+      if (existing.includes(item.mode)) return;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "mode-card";
+      btn.dataset.mode = item.mode;
+      btn.innerHTML = `
+        <span class="mode-title">${escapeHtml(item.title)}</span>
+        <span class="mode-text">${escapeHtml(item.text)}</span>
+      `;
+      els.modeGrid.appendChild(btn);
+    });
+  }
+
+  function setupVoices() {
+    function loadVoices() {
+      state.voices = synth ? synth.getVoices() : [];
+    }
+    loadVoices();
+    if (synth) {
+      synth.onvoiceschanged = loadVoices;
+    }
+  }
+
+  function prepareAudio() {
+    audio.button.preload = "auto";
+    audio.beep.preload = "auto";
+    audio.noise.preload = "auto";
+    audio.noise.loop = true;
+    audio.noise.volume = 0.22;
+  }
+
+  function unlockAudio() {
+    if (state.audioUnlocked) return;
+    state.audioUnlocked = true;
+
+    Object.values(audio).forEach(snd => {
+      try {
+        snd.volume = snd === audio.noise ? 0 : 0;
+        snd.play().then(() => {
+          snd.pause();
+          snd.currentTime = 0;
+        }).catch(() => {});
+      } catch (err) {
+        // ignorieren
+      }
+    });
+
+    audio.button.volume = 1;
+    audio.beep.volume = 1;
+    audio.noise.volume = 0.22;
+  }
+
+  function playSound(name) {
+    const snd = audio[name];
+    if (!snd) return;
+    try {
+      snd.pause();
+      snd.currentTime = 0;
+      snd.play().catch(() => {});
+    } catch (err) {
+      // ignorieren
+    }
+  }
+
+  function startNoise() {
+    try {
+      audio.noise.currentTime = 0;
+      audio.noise.play().catch(() => {});
+    } catch (err) {
+      // ignorieren
+    }
+  }
+
+  function stopNoise() {
+    try {
+      audio.noise.pause();
+      audio.noise.currentTime = 0;
+    } catch (err) {
+      // ignorieren
+    }
   }
 
   function bindEvents() {
     els.modeGrid.addEventListener("click", (e) => {
       const btn = e.target.closest(".mode-card");
       if (!btn) return;
+      unlockAudio();
       setMode(btn.dataset.mode);
       loadRandomTask();
     });
 
-    els.newTaskBtn.addEventListener("click", loadRandomTask);
-    els.speakPromptBtn.addEventListener("click", speakCurrentPrompt);
+    els.newTaskBtn.addEventListener("click", () => {
+      unlockAudio();
+      loadRandomTask();
+    });
+
+    els.speakPromptBtn.addEventListener("click", () => {
+      unlockAudio();
+      speakCurrentPrompt();
+    });
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
 
-    els.pttBtn.addEventListener("mousedown", startPushToTalk);
-    window.addEventListener("mouseup", stopPushToTalk);
+    els.pttBtn.addEventListener("mousedown", () => {
+      state.pointerPressed = true;
+      unlockAudio();
+      startPushToTalk();
+    });
+
+    window.addEventListener("mouseup", () => {
+      state.pointerPressed = false;
+      stopPushToTalk();
+    });
+
     els.pttBtn.addEventListener("touchstart", (e) => {
       e.preventDefault();
+      state.pointerPressed = true;
+      unlockAudio();
       startPushToTalk();
     }, { passive: false });
-    window.addEventListener("touchend", stopPushToTalk);
+
+    window.addEventListener("touchend", () => {
+      state.pointerPressed = false;
+      stopPushToTalk();
+    });
   }
 
   function setMode(mode) {
@@ -136,6 +327,10 @@
   }
 
   function loadRandomTask() {
+    clearTimeout(state.speechTimer);
+    stopNoise();
+    if (synth) synth.cancel();
+
     const pool = tasks[state.mode];
     state.currentTask = pool[Math.floor(Math.random() * pool.length)];
 
@@ -153,20 +348,27 @@
   function speakCurrentPrompt() {
     if (!state.currentTask || !synth) return;
 
+    clearTimeout(state.speechTimer);
+    stopNoise();
     synth.cancel();
 
-    const lines = [];
+    let line = "";
+
     if (state.mode === "receive" || state.mode === "end") {
-      lines.push(state.currentTask.programLine);
+      line = state.currentTask.programLine;
     } else if (state.mode === "start") {
-      lines.push(state.currentTask.instruction);
+      line = state.currentTask.instruction;
+    } else if (state.mode === "notunderstood_pc") {
+      line = state.currentTask.instruction;
+    } else if (state.mode === "notunderstood_student") {
+      line = state.currentTask.programLine;
     }
 
-    const utterance = new SpeechSynthesisUtterance(lines.join(". "));
-    utterance.lang = "de-CH";
-    utterance.rate = 0.92;
-    utterance.pitch = 1.0;
-    synth.speak(utterance);
+    if (!line) return;
+
+    state.speechTimer = setTimeout(() => {
+      speakLine(line);
+    }, 1000);
   }
 
   function setupRecognition() {
@@ -225,16 +427,10 @@
 
   function onKeyDown(e) {
     if (e.code !== "Space") return;
-
-    const tag = document.activeElement ? document.activeElement.tagName : "";
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON") {
-      e.preventDefault();
-    } else {
-      e.preventDefault();
-    }
-
+    e.preventDefault();
     if (state.isSpaceDown) return;
     state.isSpaceDown = true;
+    unlockAudio();
     startPushToTalk();
   }
 
@@ -248,8 +444,9 @@
   function startPushToTalk() {
     if (!state.currentTask || state.isRecognitionActive || state.isWaitingPause) return;
 
-    synth.cancel();
-    clearTimeout(state.pauseTimer);
+    clearTimeout(state.speechTimer);
+    stopNoise();
+    if (synth) synth.cancel();
 
     state.finalTranscript = "";
     state.partialTranscript = "";
@@ -259,8 +456,10 @@
     els.pttBtn.classList.add("active");
     setRecordState("waiting", "Drücken … schlucken …");
 
+    playSound("button");
+
     state.pauseTimer = setTimeout(() => {
-      if (!state.isSpaceDown && !isMouseOrTouchActive()) {
+      if (!state.isSpaceDown && !state.pointerPressed) {
         state.isWaitingPause = false;
         els.pttBtn.classList.remove("active");
         setRecordState("idle", "Bereit");
@@ -270,6 +469,7 @@
       state.isWaitingPause = false;
       state.isRecognitionActive = true;
       setRecordState("recording", "Aufnahme läuft");
+
       try {
         state.recognition.start();
       } catch (err) {
@@ -279,18 +479,9 @@
     }, 350);
   }
 
-  let pointerPressed = false;
-  els && els.pttBtn && els.pttBtn.addEventListener("mousedown", () => { pointerPressed = true; });
-  window.addEventListener("mouseup", () => { pointerPressed = false; });
-  els && els.pttBtn && els.pttBtn.addEventListener("touchstart", () => { pointerPressed = true; }, { passive: true });
-  window.addEventListener("touchend", () => { pointerPressed = false; });
-
-  function isMouseOrTouchActive() {
-    return pointerPressed;
-  }
-
   function stopPushToTalk() {
     clearTimeout(state.pauseTimer);
+    playSound("beep");
 
     if (state.isWaitingPause) {
       state.isWaitingPause = false;
@@ -317,22 +508,166 @@
     const heard = transcript || "";
     els.heardText.textContent = heard || "Nichts erkannt.";
 
+    const expected = getExpectedForCurrentStep();
+
     if (!heard) {
-      els.analysisText.innerHTML = `<span class="word missing">${escapeHtml(state.currentTask.expected)}</span>`;
+      els.analysisText.innerHTML = `<span class="word missing">${escapeHtml(expected)}</span>`;
       els.feedbackText.innerHTML = '<span class="feedback-bad">Es wurde nichts erkannt.</span>';
-      els.solutionText.textContent = state.currentTask.expected;
+      els.solutionText.textContent = expected;
       setRecordState("idle", "Bereit");
+      schedulePcFollowUp(false);
       return;
     }
 
-    const result = compareUtterance(heard, state.currentTask.expected);
+    const result = compareUtterance(heard, expected);
     els.analysisText.innerHTML = result.html;
     els.feedbackText.innerHTML = result.isPerfect
       ? '<span class="feedback-good">Alles korrekt. Reihenfolge und Begriffe stimmen.</span>'
-      : `<span class="feedback-bad">Nicht ganz korrekt. Achte auf die genaue Reihenfolge und die exakten Funkwörter.</span>`;
-    els.solutionText.textContent = result.isPerfect ? "Alles richtig." : state.currentTask.expected;
+      : '<span class="feedback-bad">Nicht ganz korrekt. Achte auf die exakten Funkwörter und ihre Reihenfolge.</span>';
+    els.solutionText.textContent = result.isPerfect ? "Alles richtig." : expected;
 
     setRecordState("idle", "Bereit");
+    schedulePcFollowUp(result.isPerfect);
+  }
+
+  function getExpectedForCurrentStep() {
+    if (!state.currentTask) return "";
+
+    const task = state.currentTask;
+
+    if (state.mode === "notunderstood_pc") {
+      if (!task._phase) {
+        task._phase = 1;
+      }
+      if (task._phase === 1) return task.expected;
+      if (task._phase === 2) return task.secondExpected;
+    }
+
+    if (state.mode === "notunderstood_student") {
+      if (!task._phase) {
+        task._phase = 1;
+      }
+      if (task._phase === 1) return task.expected;
+      if (task._phase === 2) return task.secondExpected;
+    }
+
+    return task.expected;
+  }
+
+  function schedulePcFollowUp(isPerfect) {
+    if (!state.currentTask || !synth) return;
+
+    clearTimeout(state.speechTimer);
+    stopNoise();
+    synth.cancel();
+
+    const task = state.currentTask;
+
+    if (state.mode === "receive" || state.mode === "start" || state.mode === "end") {
+      const line = task.pcFollowUp || "";
+      if (!line) return;
+      state.speechTimer = setTimeout(() => {
+        speakLine(line);
+      }, 1000);
+      return;
+    }
+
+    if (state.mode === "notunderstood_pc") {
+      if (!task._phase) task._phase = 1;
+
+      if (task._phase === 1) {
+        state.speechTimer = setTimeout(() => {
+          speakLine(task.pcFollowUp);
+          setTimeout(() => {
+            speakLine(task.secondPrompt);
+            setTimeout(() => {
+              speakLine(task.forcedPcReply);
+              task._phase = 2;
+              els.feedbackText.innerHTML += '<br><span class="feedback-bad">Jetzt musst du die Meldung korrekt mit „Ich wiederhole … antworten“ wiederholen.</span>';
+              els.solutionText.textContent = task.secondExpected;
+            }, 1800);
+          }, 1800);
+        }, 1000);
+        return;
+      }
+
+      if (task._phase === 2) {
+        state.speechTimer = setTimeout(() => {
+          speakLine("Richtig, Schluss");
+          task._phase = 1;
+        }, 1000);
+        return;
+      }
+    }
+
+    if (state.mode === "notunderstood_student") {
+      if (!task._phase) task._phase = 1;
+
+      if (task._phase === 1) {
+        state.speechTimer = setTimeout(() => {
+          speakLine(task.pcFollowUp, { distorted: true, noisy: true });
+          task._phase = 2;
+          els.feedbackText.innerHTML += '<br><span class="feedback-bad">Diese Meldung war absichtlich gestört. Du musst jetzt korrekt sagen: „Nicht verstanden, wiederholen, antworten“.</span>';
+          els.solutionText.textContent = task.secondExpected;
+        }, 1000);
+        return;
+      }
+
+      if (task._phase === 2) {
+        state.speechTimer = setTimeout(() => {
+          speakLine(task.repeatLine);
+          setTimeout(() => {
+            speakLine("Richtig, Schluss");
+            task._phase = 1;
+          }, 1800);
+        }, 1000);
+      }
+    }
+  }
+
+  function speakLine(text, options = {}) {
+    if (!synth || !text) return;
+
+    stopNoise();
+    synth.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "de-CH";
+
+    if (options.distorted) {
+      utterance.rate = 0.82;
+      utterance.pitch = 0.82;
+      const altVoice = findAlternateVoice();
+      if (altVoice) utterance.voice = altVoice;
+    } else {
+      utterance.rate = 0.92;
+      utterance.pitch = 1.0;
+      const normalVoice = findGermanVoice();
+      if (normalVoice) utterance.voice = normalVoice;
+    }
+
+    if (options.noisy) {
+      startNoise();
+      utterance.onend = () => stopNoise();
+      utterance.onerror = () => stopNoise();
+    }
+
+    synth.speak(utterance);
+  }
+
+  function findGermanVoice() {
+    if (!state.voices.length) return null;
+    return state.voices.find(v => /de[-_](CH|DE|AT)/i.test(v.lang)) ||
+           state.voices.find(v => /^de/i.test(v.lang)) ||
+           null;
+  }
+
+  function findAlternateVoice() {
+    if (!state.voices.length) return null;
+    const normal = findGermanVoice();
+    return state.voices.find(v => /^de/i.test(v.lang) && (!normal || v.name !== normal.name)) ||
+           normal ||
+           null;
   }
 
   function compareUtterance(heard, expected) {
@@ -372,8 +707,7 @@
     ops.reverse();
 
     const html = ops.map(op => {
-      const cls = op.type;
-      return `<span class="word ${cls}">${escapeHtml(op.value)}</span>`;
+      return `<span class="word ${op.type}">${escapeHtml(op.value)}</span>`;
     }).join(" ");
 
     const isPerfect =
@@ -399,9 +733,7 @@
   }
 
   function tokenize(text) {
-    return normalize(text)
-      .split(" ")
-      .filter(Boolean);
+    return normalize(text).split(" ").filter(Boolean);
   }
 
   function normalize(text) {
@@ -422,7 +754,7 @@
   }
 
   function escapeHtml(str) {
-    return str
+    return String(str)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
